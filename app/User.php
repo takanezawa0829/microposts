@@ -61,6 +61,14 @@ class User extends Authenticatable
         return $this->belongsToMany(User::class, 'user_follow', 'follow_id', 'user_id')->withTimestamps();
     }
     
+    /*
+     * このユーザーがお気に入りに追加した投稿。（ Micropostモデルとの関係を定義）
+    */
+    public function favorites()
+    {
+        return $this->belongsToMany(Micropost::class, 'favorites', 'user_id', 'micropost_id')->withTimestamps();
+    }
+    
     /**
      * $userIdで指定されたユーザをフォローする。
      *
@@ -106,6 +114,46 @@ class User extends Authenticatable
             return false;
         }
     }
+    
+    /**
+     * $micropostIdで指定された投稿をお気に入りに追加する。
+     *
+     * @param  int  $micropostId
+     * @return bool
+     */
+    public function favorite($micropostId)
+    {
+        // すでにお気に入りに登録してしているかの確認
+        $exist = $this->is_add_favorites($micropostId);
+        
+        if ($exist) {
+            return false;
+        }else{
+            // お気に入りに登録する
+            $this->favorites()->attach($micropostId);
+            return true;
+        }
+    }
+    
+    /**
+     * $micropostIdで指定された投稿をお気に入りから削除する。
+     *
+     * @param  int  $micropostId
+     * @return bool
+     */
+    public function unfavorite($micropostId)
+    {
+        // すでにお気に入りに登録してしているかの確認
+        $exist = $this->is_add_favorites($micropostId);
+        
+        if ($exist) {
+            // お気に入りから削除する
+            $this->favorites()->detach($micropostId);
+            return true;
+        }else{
+            return false;
+        }
+    }
 
     /**
      * 指定された $userIdのユーザをこのユーザがフォロー中であるか調べる。フォロー中ならtrueを返す。
@@ -117,6 +165,18 @@ class User extends Authenticatable
     {
         // フォロー中ユーザの中に $userIdのものが存在するか
         return $this->followings()->where('follow_id', $userId)->exists();
+    }
+    
+    /**
+     * 指定された $micropostIdの投稿をこのユーザがお気に入りに追加しているか調べる。追加しているならtrueを返す。
+     *
+     * @param  int  $micropostId
+     * @return bool
+     */
+    public function is_add_favorites($micropostId)
+    {
+        // お気に入りに追加した投稿の中に $micropostIdのものが存在するか
+        return $this->favorites()->where('micropost_id', $micropostId)->exists();
     }
     
     /**
@@ -137,6 +197,8 @@ class User extends Authenticatable
      */
     public function loadRelationshipCounts()
     {
-        $this->loadCount(['microposts', 'followings', 'followers']);
+        $this->loadCount(['microposts', 'followings', 'followers', 'favorites']);
     }
+    
+    
 }
